@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+.env.*
+.env.local
+.edge-profile*/
+*.log
+qa-*.png
+public/menu/dish-image-metadata.json
