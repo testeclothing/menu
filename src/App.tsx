@@ -436,6 +436,7 @@ export default function App() {
         draftItems={tableDraft.items}
         totalQuantity={tableDraft.totalQuantity}
         onSetQuantity={tableDraft.setQuantity}
+        onToggleModifier={tableDraft.controls.toggleModifier}
       />
       <footer className="site-footer">
         <span />

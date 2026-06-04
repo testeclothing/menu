@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Minus, Plus, X } from "lucide-react";
 import { itemById, type MenuItem } from "../data/menu";
 import { uiCopy, type Language } from "../i18n";
-import { getModifierLabel, type TableDraftItem } from "../tableDraft";
+import { getModifierLabel, getModifierOptions, type TableDraftItem } from "../tableDraft";
 
 interface TableDraftDrawerProps {
   language: Language;
   draftItems: TableDraftItem[];
   totalQuantity: number;
   onSetQuantity: (itemId: string, quantity: number) => void;
+  onToggleModifier: (itemId: string, modifierId: string) => void;
 }
 
 function DraftDishThumb({ item }: { item: MenuItem }) {
@@ -30,6 +31,7 @@ export function TableDraftDrawer({
   draftItems,
   totalQuantity,
   onSetQuantity,
+  onToggleModifier,
 }: TableDraftDrawerProps) {
   const [open, setOpen] = useState(false);
   const t = uiCopy[language].draft;
@@ -50,6 +52,7 @@ export function TableDraftDrawer({
             draftItem,
             item,
             modifiers: draftItem.modifierIds.map((modifierId) => getModifierLabel(modifierId, language)),
+            modifierOptions: getModifierOptions(item, language),
           };
         })
         .filter((row): row is NonNullable<typeof row> => Boolean(row)),
@@ -79,7 +82,7 @@ export function TableDraftDrawer({
 
           {rows.length > 0 ? (
             <div className="table-draft-list">
-              {rows.map(({ draftItem, item, modifiers }) => (
+              {rows.map(({ draftItem, item, modifiers, modifierOptions }) => (
                 <article className="table-draft-card" key={draftItem.itemId}>
                   <DraftDishThumb item={item} />
                   <div className="table-draft-card__copy">
@@ -104,6 +107,25 @@ export function TableDraftDrawer({
                         <Plus size={13} aria-hidden="true" />
                       </button>
                     </div>
+                    {modifierOptions.length > 0 ? (
+                      <div className="table-draft-modifiers" aria-label={t.modifiersLabel}>
+                        {modifierOptions.map((modifier) => {
+                          const selected = draftItem.modifierIds.includes(modifier.id);
+
+                          return (
+                            <button
+                              className={selected ? "is-selected" : ""}
+                              key={modifier.id}
+                              type="button"
+                              aria-pressed={selected}
+                              onClick={() => onToggleModifier(item.id, modifier.id)}
+                            >
+                              {modifier.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
                   </div>
                   <button
                     className="table-draft-card__status"
