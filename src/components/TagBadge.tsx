@@ -1,23 +1,6 @@
 import type { DishTag } from "../data/menu";
+import { getTagLabel, type Language } from "../i18n";
 
-const tagLabels: Record<DishTag, string> = {
-  classic: "Classic",
-  new: "New",
-  fresh: "Fresh",
-  crispy: "Crispy",
-  chef_pick: "Chef's pick",
-  most_chosen: "Most chosen",
-  to_share: "Great to share",
-  premium: "Premium",
-  summer: "Summer",
-  vegetarian: "Vegetarian",
-  hot: "Hot",
-  dessert: "Dessert",
-  tea: "Tea",
-  digestif: "Digestif",
-  needs_verification: "Verify",
-};
-
-export function TagBadge({ tag }: { tag: DishTag }) {
-  return <span className={`tag tag--${tag}`}>{tagLabels[tag]}</span>;
+export function TagBadge({ tag, language }: { tag: DishTag; language: Language }) {
+  return <span className={`tag tag--${tag}`}>{getTagLabel(tag, language)}</span>;
 }

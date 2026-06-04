@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Coffee, Leaf, Star, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, Coffee, Leaf, Star, Users } from "lucide-react";
 import { AskTeamBlock } from "./components/AskTeamBlock";
 import { CategoryCard } from "./components/CategoryCard";
 import { DishCard } from "./components/DishCard";
@@ -11,6 +11,7 @@ import { Header } from "./components/Header";
 import { Hero } from "./components/Hero";
 import { QRVideoBlock } from "./components/QRVideoBlock";
 import { SectionHeader } from "./components/SectionHeader";
+import { TableDraftDrawer } from "./components/TableDraftDrawer";
 import { experienceById, experiences } from "./data/experiences";
 import {
   type CategoryId,
@@ -21,17 +22,33 @@ import {
   itemsByCategory,
   verificationItems,
 } from "./data/menu";
+import {
+  languageOptions,
+  localizeCategory,
+  localizeExperience,
+  uiCopy,
+  type Language,
+} from "./i18n";
+import { type TableDraftControls, useTableDraft } from "./tableDraft";
 
 type View =
   | { name: "home" }
   | { name: "experience"; id: ExperienceId }
   | { name: "category"; id: CategoryId };
 
+type RouteState = {
+  language: Language | null;
+  view: View;
+};
+
 const defaultView: View = { name: "home" };
 
-function parseHash(): View {
-  const raw = window.location.hash.replace(/^#\/?/, "");
-  const [type, id] = raw.split("/");
+function isLanguage(value?: string): value is Language {
+  return value === "pt" || value === "en";
+}
+
+function parseView(parts: string[]): View {
+  const [type, id] = parts;
 
   if (type === "experience" && experienceById(id as ExperienceId)) {
     return { name: "experience", id: id as ExperienceId };
@@ -44,18 +61,35 @@ function parseHash(): View {
   return defaultView;
 }
 
-function pathFor(view: View) {
-  if (view.name === "experience") return `#/experience/${view.id}`;
-  if (view.name === "category") return `#/category/${view.id}`;
-  return "#/";
+function parseHash(): RouteState {
+  const raw = window.location.hash.replace(/^#\/?/, "");
+  const parts = raw.split("/").filter(Boolean);
+
+  if (parts.length === 0) {
+    return { language: null, view: defaultView };
+  }
+
+  const [firstPart, ...rest] = parts;
+
+  if (isLanguage(firstPart)) {
+    return { language: firstPart, view: parseView(rest) };
+  }
+
+  return { language: "en", view: parseView(parts) };
 }
 
-function useHashView() {
-  const [view, setView] = useState<View>(() => parseHash());
+function pathFor(view: View, language: Language) {
+  if (view.name === "experience") return `#/${language}/experience/${view.id}`;
+  if (view.name === "category") return `#/${language}/category/${view.id}`;
+  return `#/${language}`;
+}
+
+function useHashRoute() {
+  const [route, setRoute] = useState<RouteState>(() => parseHash());
 
   useEffect(() => {
     const onChange = () => {
-      setView(parseHash());
+      setRoute(parseHash());
       requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }));
     };
 
@@ -64,25 +98,88 @@ function useHashView() {
   }, []);
 
   const navigate = (nextView: View) => {
-    window.location.hash = pathFor(nextView);
+    window.location.hash = pathFor(nextView, route.language ?? "en");
   };
 
-  return { view, navigate };
+  const selectLanguage = (nextLanguage: Language) => {
+    window.location.hash = pathFor(defaultView, nextLanguage);
+  };
+
+  const changeLanguage = (nextLanguage: Language) => {
+    window.location.hash = pathFor(route.view, nextLanguage);
+  };
+
+  return { route, navigate, selectLanguage, changeLanguage };
 }
 
-function HomePage({ navigate }: { navigate: (view: View) => void }) {
+function LanguageGate({ onSelect }: { onSelect: (language: Language) => void }) {
+  const previewItem = itemById("combo-confraria-ii") ?? itemById("usuzukuri-salmao");
+  const t = uiCopy.en.languageGate;
+
+  return (
+    <main className="language-gate" aria-labelledby="language-gate-title">
+      <div className="language-gate__content">
+        <div className="language-gate__logo" aria-label="Confraria Sushi">
+          <span className="language-gate__mark" aria-hidden="true" />
+          <span>
+            <strong>Confraria</strong>
+            <small>Sushi</small>
+          </span>
+        </div>
+
+        <span className="eyebrow">{t.eyebrow}</span>
+        <h1 id="language-gate-title">{t.title}</h1>
+        <p>{t.subtitle}</p>
+
+        <div className="language-actions" aria-label="Choose menu language">
+          {(["pt", "en"] as const).map((language) => {
+            const option = languageOptions[language];
+
+            return (
+              <button
+                className="language-card"
+                key={language}
+                type="button"
+                onClick={() => onSelect(language)}
+              >
+                <span>{option.shortLabel}</span>
+                <strong>{option.action}</strong>
+                <small>{option.description}</small>
+                <ArrowRight size={18} aria-hidden="true" />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="language-gate__preview">
+        <DishVisual item={previewItem} theme="platter" label="Combo Confraria II" />
+        <span>{t.previewLabel}</span>
+      </div>
+    </main>
+  );
+}
+
+function HomePage({
+  language,
+  navigate,
+}: {
+  language: Language;
+  navigate: (view: View) => void;
+}) {
   const starterCategory = categories.find((category) => category.id === "starters");
+  const t = uiCopy[language].home;
 
   return (
     <>
-      <Hero />
+      <Hero language={language} />
 
       <main className="page-flow">
         <section>
           <SectionHeader
-            eyebrow="Choose your experience"
-            title="Start with a guided path"
-            actionLabel="See all"
+            eyebrow={t.experienceEyebrow}
+            title={t.experienceTitle}
+            actionLabel={t.seeAll}
             onAction={() => navigate({ name: "experience", id: "sharing" })}
           />
           <div className="experience-scroll">
@@ -90,6 +187,7 @@ function HomePage({ navigate }: { navigate: (view: View) => void }) {
               <ExperienceCard
                 key={experience.id}
                 experience={experience}
+                language={language}
                 onOpen={() => navigate({ name: "experience", id: experience.id })}
               />
             ))}
@@ -98,9 +196,9 @@ function HomePage({ navigate }: { navigate: (view: View) => void }) {
 
         <section>
           <SectionHeader
-            eyebrow="Explore by category"
-            title="Find the right plate"
-            actionLabel="Starters"
+            eyebrow={t.categoryEyebrow}
+            title={t.categoryTitle}
+            actionLabel={t.starters}
             onAction={() => starterCategory && navigate({ name: "category", id: starterCategory.id })}
           />
           <div className="category-grid">
@@ -108,23 +206,26 @@ function HomePage({ navigate }: { navigate: (view: View) => void }) {
               <CategoryCard
                 key={category.id}
                 category={category}
+                language={language}
                 onOpen={() => navigate({ name: "category", id: category.id })}
               />
             ))}
           </div>
         </section>
 
-        <FinishSection onOpenFinish={() => navigate({ name: "category", id: "finish" })} />
+        <FinishSection language={language} onOpenFinish={() => navigate({ name: "category", id: "finish" })} />
 
         <div className="info-grid">
-          <QRVideoBlock />
-          <AskTeamBlock />
+          <QRVideoBlock language={language} />
+          <AskTeamBlock language={language} />
         </div>
 
         {verificationItems.length > 0 ? (
           <section className="verification-strip">
-            <strong>{verificationItems.length} items need verification</strong>
-            <p>These are kept visible internally so uncertain prices or descriptions are never treated as final.</p>
+            <strong>
+              {verificationItems.length} {t.verificationTitle}
+            </strong>
+            <p>{t.verificationCopy}</p>
           </section>
         ) : null}
       </main>
@@ -134,28 +235,33 @@ function HomePage({ navigate }: { navigate: (view: View) => void }) {
 
 function ExperiencePage({
   id,
+  language,
+  draftControls,
   navigate,
 }: {
   id: ExperienceId;
+  language: Language;
+  draftControls: TableDraftControls;
   navigate: (view: View) => void;
 }) {
-  const experience = experienceById(id) ?? experiences[0];
+  const experience = localizeExperience(experienceById(id) ?? experiences[0], language);
   const heroItem = itemById(experience.recommendedPath[0]);
   const recommendedItems = experience.recommendedPath
     .map((itemId) => itemById(itemId))
     .filter(Boolean);
+  const t = uiCopy[language].detail;
 
   const stats = [
     { icon: Users, label: experience.bestFor, value: experience.guests },
-    { icon: Star, label: "Mood", value: experience.tags[0] },
-    { icon: Coffee, label: "Pairing", value: experience.pairing },
+    { icon: Star, label: t.mood, value: experience.tags[0] },
+    { icon: Coffee, label: t.pairing, value: experience.pairing },
   ];
 
   return (
     <main className="detail-page">
       <button className="back-button" type="button" onClick={() => navigate({ name: "home" })}>
         <ArrowLeft size={18} aria-hidden="true" />
-        Virtual Menu
+        {t.backToMenu}
       </button>
 
       <section className="detail-hero">
@@ -185,18 +291,18 @@ function ExperiencePage({
         })}
       </div>
 
-      <GuidedPath steps={experience.steps} />
+      <GuidedPath steps={experience.steps} language={language} draftControls={draftControls} />
 
       <section className="recommended-path">
         <SectionHeader
-          eyebrow="Your recommended path"
-          title="A complete table flow"
+          eyebrow={t.recommendedEyebrow}
+          title={t.recommendedTitle}
         />
         <div className="path-strip">
           {recommendedItems.map((item, index) =>
             item ? (
               <div className="path-item" key={item.id}>
-                <DishCard item={item} compact />
+                <DishCard item={item} compact language={language} draftControls={draftControls} />
                 {index < recommendedItems.length - 1 ? <span className="path-plus">+</span> : null}
               </div>
             ) : null,
@@ -210,20 +316,25 @@ function ExperiencePage({
 
 function CategoryPage({
   id,
+  language,
+  draftControls,
   navigate,
 }: {
   id: CategoryId;
+  language: Language;
+  draftControls: TableDraftControls;
   navigate: (view: View) => void;
 }) {
-  const category = categoryById(id) ?? categories[0];
+  const category = localizeCategory(categoryById(id) ?? categories[0], language);
   const items = useMemo(() => itemsByCategory(category.id), [category.id]);
   const heroItem = items.find((item) => item.tags.includes("chef_pick")) ?? items[0];
+  const t = uiCopy[language].detail;
 
   return (
     <main className="detail-page">
       <button className="back-button" type="button" onClick={() => navigate({ name: "home" })}>
         <ArrowLeft size={18} aria-hidden="true" />
-        Virtual Menu
+        {t.backToMenu}
       </button>
 
       <section className="category-hero">
@@ -235,33 +346,37 @@ function CategoryPage({
         <DishVisual item={heroItem} theme={category.imageTheme} className="category-hero__visual" />
       </section>
 
-      <nav className="category-tabs" aria-label="Menu categories">
-        {categories.map((categoryItem) => (
-          <button
-            key={categoryItem.id}
-            className={categoryItem.id === category.id ? "is-active" : ""}
-            type="button"
-            onClick={() => navigate({ name: "category", id: categoryItem.id })}
-          >
-            {categoryItem.navTitle}
-          </button>
-        ))}
+      <nav className="category-tabs" aria-label={t.categoryTabsLabel}>
+        {categories.map((categoryItem) => {
+          const localizedCategory = localizeCategory(categoryItem, language);
+
+          return (
+            <button
+              key={categoryItem.id}
+              className={categoryItem.id === category.id ? "is-active" : ""}
+              type="button"
+              onClick={() => navigate({ name: "category", id: categoryItem.id })}
+            >
+              {localizedCategory.navTitle}
+            </button>
+          );
+        })}
       </nav>
 
       <section className="dish-list">
         {items.map((item) => (
-          <DishCard key={item.id} item={item} />
+          <DishCard key={item.id} item={item} language={language} draftControls={draftControls} />
         ))}
       </section>
 
       <div className="category-tail">
         <div>
           <Leaf size={24} aria-hidden="true" />
-          <h2>Not sure where this fits?</h2>
-          <p>Ask the team for the best starter, main selection and finish for your table.</p>
+          <h2>{t.tailTitle}</h2>
+          <p>{t.tailCopy}</p>
         </div>
         <button type="button" onClick={() => navigate({ name: "experience", id: "sharing" })}>
-          Best for Sharing
+          {t.tailButton}
         </button>
       </div>
     </main>
@@ -269,23 +384,64 @@ function CategoryPage({
 }
 
 export default function App() {
-  const { view, navigate } = useHashView();
+  const { route, navigate, selectLanguage, changeLanguage } = useHashRoute();
+  const { language, view } = route;
+  const tableDraft = useTableDraft();
 
+  useEffect(() => {
+    document.documentElement.lang = language ?? "en";
+  }, [language]);
+
+  if (!language) {
+    return (
+      <div className="app-shell app-shell--gate">
+        <LanguageGate onSelect={selectLanguage} />
+      </div>
+    );
+  }
+
+  const t = uiCopy[language].footer;
   const navHome = () => navigate({ name: "home" });
   const navCategory = (id: string) => navigate({ name: "category", id: id as CategoryId });
   const navExperience = (id: string) => navigate({ name: "experience", id: id as ExperienceId });
 
   return (
     <div className="app-shell">
-      <Header onHome={navHome} onCategory={navCategory} onExperience={navExperience} />
-      {view.name === "home" ? <HomePage navigate={navigate} /> : null}
-      {view.name === "experience" ? <ExperiencePage id={view.id} navigate={navigate} /> : null}
-      {view.name === "category" ? <CategoryPage id={view.id} navigate={navigate} /> : null}
+      <Header
+        language={language}
+        onHome={navHome}
+        onCategory={navCategory}
+        onExperience={navExperience}
+        onLanguageChange={changeLanguage}
+      />
+      {view.name === "home" ? <HomePage language={language} navigate={navigate} /> : null}
+      {view.name === "experience" ? (
+        <ExperiencePage
+          id={view.id}
+          language={language}
+          draftControls={tableDraft.controls}
+          navigate={navigate}
+        />
+      ) : null}
+      {view.name === "category" ? (
+        <CategoryPage
+          id={view.id}
+          language={language}
+          draftControls={tableDraft.controls}
+          navigate={navigate}
+        />
+      ) : null}
+      <TableDraftDrawer
+        language={language}
+        draftItems={tableDraft.items}
+        totalQuantity={tableDraft.totalQuantity}
+        onSetQuantity={tableDraft.setQuantity}
+      />
       <footer className="site-footer">
         <span />
         <p>
-          <b>Made to be shared.</b>
-          Better together.
+          <b>{t.title}</b>
+          {t.copy}
         </p>
         <span />
       </footer>

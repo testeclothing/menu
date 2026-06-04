@@ -1,38 +1,33 @@
 import { ChefHat, Leaf, Users } from "lucide-react";
-import { itemById } from "../data/menu";
-import { DishVisual } from "./DishVisual";
+import { uiCopy, type Language } from "../i18n";
 
-export function Hero() {
-  const heroItem = itemById("usuzukuri-salmao");
+export function Hero({ language }: { language: Language }) {
+  const t = uiCopy[language].hero;
 
   return (
     <section className="hero">
-      <div className="hero__copy">
-        <span className="hero__line" aria-hidden="true" />
-        <h1>
-          Virtual
-          <span>Summer Menu</span>
-        </h1>
-        <p>Choose your path. We'll guide the experience.</p>
-      </div>
-      <DishVisual
-        className="hero__visual"
-        item={heroItem}
-        theme="salmon"
-        label="Usuzukuri Salmão"
+      <video
+        className="hero__video"
+        src="/menu/sushihero.mp4"
+        autoPlay
+        muted
+        loop
+        playsInline
+        aria-hidden="true"
       />
-      <div className="hero__signals" aria-label="Menu qualities">
+      <div className="hero__overlay" aria-hidden="true" />
+      <div className="hero__signals" aria-label={t.signalsLabel}>
         <span>
           <Leaf size={22} aria-hidden="true" />
-          Fresh daily
+          {t.fresh}
         </span>
         <span>
           <ChefHat size={22} aria-hidden="true" />
-          Chef's creations
+          {t.chef}
         </span>
         <span>
           <Users size={22} aria-hidden="true" />
-          Made to share
+          {t.share}
         </span>
       </div>
     </section>

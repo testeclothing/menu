@@ -1,13 +1,17 @@
 import { ArrowRight } from "lucide-react";
 import type { GuidedStep } from "../data/experiences";
 import { itemById, type MenuItem } from "../data/menu";
+import type { Language } from "../i18n";
+import type { TableDraftControls } from "../tableDraft";
 import { DishCard } from "./DishCard";
 
 interface GuidedPathProps {
   steps: GuidedStep[];
+  language: Language;
+  draftControls?: TableDraftControls;
 }
 
-export function GuidedPath({ steps }: GuidedPathProps) {
+export function GuidedPath({ steps, language, draftControls }: GuidedPathProps) {
   return (
     <div className="guided-path">
       {steps.map((step, index) => {
@@ -26,7 +30,13 @@ export function GuidedPath({ steps }: GuidedPathProps) {
             </div>
             <div className="guided-step__items">
               {items.map((item) => (
-                <DishCard key={item.id} item={item} compact />
+                <DishCard
+                  key={item.id}
+                  item={item}
+                  compact
+                  language={language}
+                  draftControls={draftControls}
+                />
               ))}
             </div>
             <ArrowRight className="guided-step__arrow" size={18} aria-hidden="true" />

@@ -1,40 +1,44 @@
 import { Coffee, Martini, CakeSlice } from "lucide-react";
 import { itemById } from "../data/menu";
+import { uiCopy, type Language } from "../i18n";
 import { DishVisual } from "./DishVisual";
 import { SectionHeader } from "./SectionHeader";
 
 interface FinishSectionProps {
+  language: Language;
   onOpenFinish: () => void;
 }
 
 const finishTiles = [
   {
-    title: "Desserts",
-    copy: "Sweet finish",
+    titleKey: "desserts",
+    copyKey: "dessertsCopy",
     icon: CakeSlice,
     itemId: "gelado-cha-verde",
   },
   {
-    title: "Teas & Sake",
-    copy: "Carefully selected harmonies",
+    titleKey: "teas",
+    copyKey: "teasCopy",
     icon: Coffee,
     itemId: "cha-japones-genmaicha",
   },
   {
-    title: "Drinks & Digestifs",
-    copy: "To enjoy your moment",
+    titleKey: "drinks",
+    copyKey: "drinksCopy",
     icon: Martini,
     itemId: "limoncello",
   },
-];
+] as const;
 
-export function FinishSection({ onOpenFinish }: FinishSectionProps) {
+export function FinishSection({ language, onOpenFinish }: FinishSectionProps) {
+  const t = uiCopy[language].finish;
+
   return (
     <section>
       <SectionHeader
-        eyebrow="Don't forget the finish"
-        title="Complete the experience"
-        actionLabel="See all"
+        eyebrow={t.eyebrow}
+        title={t.title}
+        actionLabel={uiCopy[language].home.seeAll}
         onAction={onOpenFinish}
       />
       <div className="finish-grid">
@@ -43,12 +47,12 @@ export function FinishSection({ onOpenFinish }: FinishSectionProps) {
           const item = itemById(tile.itemId);
 
           return (
-            <button className="finish-card" key={tile.title} type="button" onClick={onOpenFinish}>
+            <button className="finish-card" key={tile.titleKey} type="button" onClick={onOpenFinish}>
               <DishVisual item={item} theme="dessert" />
               <div>
                 <Icon size={26} aria-hidden="true" />
-                <h3>{tile.title}</h3>
-                <p>{tile.copy}</p>
+                <h3>{t[tile.titleKey]}</h3>
+                <p>{t[tile.copyKey]}</p>
               </div>
             </button>
           );
